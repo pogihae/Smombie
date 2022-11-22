@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Smombie</string>
+    <string name="channel_name">Smombie analysis</string>
+    <string name="channel_description">smombie analysis notification</string>
+</resources>
