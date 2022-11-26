@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-
 package com.example.smombie.analysis
 
 import ai.onnxruntime.*
@@ -21,7 +18,7 @@ data class AnalysisResult(
 
 class ORTAnalyzer(
     private val ortSession: OrtSession?,
-    private val updateUICallback: (AnalysisResult) -> Unit
+    private val updateUICallback: (AnalysisResult, Bitmap) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private fun softMax(modelResult: FloatArray): FloatArray {
@@ -71,7 +68,7 @@ class ORTAnalyzer(
                     }
                 }
             }
-            updateUICallback(analysisResult)
+            updateUICallback(analysisResult, bitmap)
         }
 
         image.close()

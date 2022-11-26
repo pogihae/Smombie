@@ -1,7 +1,110 @@
-package com.example.smombie.ui
+package com.example.smombie
 
-class Alerter {
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.Service
+import android.content.Context
+import android.graphics.*
+import android.util.Log
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.view.animation.Animation
+import android.view.animation.Animation.AnimationListener
+import android.view.animation.AnimationUtils
+import android.widget.FrameLayout
+import android.widget.ImageView
+import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
 
-    fun show() {
+
+class Alerter(private val mContext: Context) : FrameLayout(mContext) {
+    private val imageView: ImageView = ImageView(context)
+
+    private val enterAnimation = AnimationUtils.loadAnimation(context, R.anim.alerter_slide_in_from_top)
+    private val exitAnimation = AnimationUtils.loadAnimation(context, R.anim.alerter_slide_out_to_top)
+
+    private val windowManager: WindowManager = context.getSystemService(WindowManager::class.java)
+
+    private var isShowing: Boolean = false
+    private var startTime: Long = 0L
+
+    init {
+        addOverlayView(
+            this, ALERT_WIDTH, ALERT_HEIGHT, Gravity.TOP
+        )
+        imageView.scaleType = ImageView.ScaleType.CENTER_CROP
+        visibility = View.INVISIBLE
+        this.addView(imageView)
+
+        startTime = 0
+    }
+
+    fun show(image: Bitmap?) {
+        if (image == null) {
+            return
+        }
+        visibility = View.VISIBLE
+
+        imageView.setImageBitmap(image)
+
+        startTime += 1L
+        if (!isShowing) {
+            imageView.startAnimation(enterAnimation)
+            isShowing = true
+        }
+        Log.d(TAG, "New Alert: $startTime")
+        Log.d(TAG, startTime.toString())
+    }
+
+    fun hide() {
+        if (isShowing.not()) return
+        isShowing = false
+        Log.d(TAG, "View expired duration: ${System.currentTimeMillis() - startTime}")
+        enterAnimation.setAnimationListener(null)
+        exitAnimation.setAnimationListener(object : AnimationListener {
+            override fun onAnimationStart(p0: Animation?) {
+            }
+
+            override fun onAnimationEnd(p0: Animation?) {
+                visibility = View.INVISIBLE
+            }
+
+            override fun onAnimationRepeat(p0: Animation?) {
+            }
+        })
+        imageView.startAnimation(exitAnimation)
+    }
+
+    private fun addOverlayView(
+        view: View,
+        width: Int,
+        height: Int,
+        gravity: Int,
+        xPos: Int = 0,
+        yPos: Int = 0,
+        format: Int = PixelFormat.TRANSLUCENT
+    ) {
+        val layoutParams = WindowManager.LayoutParams(
+            width,
+            height,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            format
+        ).apply {
+            this.gravity =
+                GravityCompat.getAbsoluteGravity(gravity, ViewCompat.LAYOUT_DIRECTION_LTR)
+            this.x = xPos
+            this.y = yPos
+        }
+
+        windowManager.addView(view, layoutParams)
+    }
+
+    companion object {
+        private const val TAG = "Alerter"
+        private const val ALERT_WIDTH = WindowManager.LayoutParams.MATCH_PARENT
+        private const val ALERT_HEIGHT = 600
+        private const val DURATION = 1000L
     }
 }

@@ -6,11 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
+import android.provider.Settings
 import android.widget.Button
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.smombie.analysis.AnalysisService
@@ -35,13 +39,23 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         createNotificationChannel()
-        if (allPermissionsGranted()) {
-            bindAnalysisService()
-        } else {
+        // 권한
+        if (!Settings.canDrawOverlays(this)) {
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (Settings.canDrawOverlays(this).not()) {
+                    finish()
+                }
+            }.launch(Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            ))
+        }
+        if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(
                 this, REQUIRED_PERMISSIONS, RC_PERMISSIONS
             )
         }
+
         startButton = findViewById(R.id.start_button)
         startButton.setOnClickListener { bindAnalysisService() }
     }
@@ -70,8 +84,17 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == RC_PERMISSIONS && allPermissionsGranted()) {
-            bindAnalysisService()
+        if (requestCode == RC_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                //bindAnalysisService()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permissions not granted by the user.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                finish()
+            }
         }
     }
 

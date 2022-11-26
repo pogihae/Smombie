@@ -1,6 +1,7 @@
 package com.example.smombie.util
 
 import android.graphics.*
+import android.util.Log
 import androidx.camera.core.ImageProxy
 import java.io.ByteArrayOutputStream
 import java.nio.FloatBuffer
