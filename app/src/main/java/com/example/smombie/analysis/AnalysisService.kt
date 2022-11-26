@@ -33,6 +33,7 @@ class AnalysisService : LifecycleService() {
     private val analysisExecutor: ExecutorService by lazy { Executors.newSingleThreadExecutor() }
 
     private var alertCount = 0
+    private var prevLabel = ""
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
@@ -60,16 +61,24 @@ class AnalysisService : LifecycleService() {
             return
         }
 
-        if (result.detectedLabel != ORTAnalyzer.labels[0]) {
+        if (prevLabel.isBlank()) {
+            prevLabel = result.detectedLabel
+        }
+
+        if (prevLabel == result.detectedLabel) {
             alertCount += 1
+        } else {
+            prevLabel = result.detectedLabel
+            alertCount = 0
         }
 
         Handler(Looper.getMainLooper()).post {
-            if (result.detectedLabel == ORTAnalyzer.labels[0]) {
-                alerter.hide()
-                alertCount = 0
-            } else if (alertCount > 5) {
-                alerter.show(bitmap)
+            if (alertCount > 5) {
+                if (result.detectedLabel == ORTAnalyzer.labels[0]) {
+                    alerter.hide()
+                } else {
+                    alerter.show(bitmap)
+                }
             }
         }
     }

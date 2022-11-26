@@ -14,6 +14,7 @@ import android.view.animation.Animation.AnimationListener
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.ImageView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 
@@ -34,6 +35,7 @@ class Alerter(private val mContext: Context) : FrameLayout(mContext) {
             this, ALERT_WIDTH, ALERT_HEIGHT, Gravity.TOP
         )
         imageView.scaleType = ImageView.ScaleType.CENTER_CROP
+        background = AppCompatResources.getDrawable(context, R.drawable.view_border)
         visibility = View.INVISIBLE
         this.addView(imageView)
 
