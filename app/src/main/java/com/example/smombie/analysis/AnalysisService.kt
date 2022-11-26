@@ -15,8 +15,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.LifecycleCameraController
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
-import com.example.smombie.Alerter
 import com.example.smombie.R
+import com.example.smombie.ui.Alerter
 import kotlinx.coroutines.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -75,9 +75,10 @@ class AnalysisService : LifecycleService() {
         Handler(Looper.getMainLooper()).post {
             if (alertCount > 5) {
                 if (result.detectedLabel == ORTAnalyzer.labels[0]) {
+                    //alerter.show(bitmap, result.detectedLabel)
                     alerter.hide()
                 } else {
-                    alerter.show(bitmap)
+                    alerter.show(bitmap, result.detectedLabel)
                 }
             }
         }

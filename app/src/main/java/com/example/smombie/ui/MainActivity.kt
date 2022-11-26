@@ -8,17 +8,17 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.smombie.analysis.AnalysisService
 import com.example.smombie.R
+import com.example.smombie.analysis.AnalysisService
 
 class MainActivity : AppCompatActivity() {
     private var analysisService: AnalysisService? = null
@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
             val binder = service as AnalysisService.LocalBinder
             analysisService = binder.getService()
         }
+
         override fun onServiceDisconnected(className: ComponentName) {
             analysisService = null
         }
@@ -45,10 +46,12 @@ class MainActivity : AppCompatActivity() {
                 if (Settings.canDrawOverlays(this).not()) {
                     finish()
                 }
-            }.launch(Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            ))
+            }.launch(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+            )
         }
         if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(
@@ -131,8 +134,10 @@ class MainActivity : AppCompatActivity() {
 
         // TODO 종료 Intent 수정
         val stopPendingIntent: PendingIntent =
-            PendingIntent.getService(this, 0, stopIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            PendingIntent.getService(
+                this, 0, stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
 
         val stopAction: Notification.Action = Notification.Action
             .Builder(null, "stop", stopPendingIntent).build()
@@ -158,7 +163,8 @@ class MainActivity : AppCompatActivity() {
                 android.Manifest.permission.CAMERA
             ).apply {
                 if (Build.VERSION.SDK_INT >= 33) {
-                    add(android.Manifest.permission.POST_NOTIFICATIONS) }
+                    add(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
             }.toTypedArray()
     }
 }
