@@ -18,7 +18,7 @@ import androidx.core.view.ViewCompat
 import com.example.smombie.R
 
 
-class Alerter(private val mContext: Context) : FrameLayout(mContext) {
+class Alerter(mContext: Context) : FrameLayout(mContext) {
     private val imageView: ImageView = ImageView(context)
     private val textView: TextView = TextView(context)
 
@@ -50,10 +50,9 @@ class Alerter(private val mContext: Context) : FrameLayout(mContext) {
 
         background = AppCompatResources.getDrawable(context, R.drawable.view_border)
         visibility = View.INVISIBLE
+
         this.addView(imageView)
         this.addView(textView)
-
-        startTime = 0
     }
 
     fun show(image: Bitmap?, label: String) {
@@ -81,6 +80,10 @@ class Alerter(private val mContext: Context) : FrameLayout(mContext) {
         enterAnimation.setAnimationListener(null)
         imageView.startAnimation(exitAnimation)
         visibility = View.INVISIBLE
+    }
+
+    fun remove() {
+        windowManager.removeViewImmediate(this)
     }
 
     private fun addOverlayView(
@@ -112,6 +115,5 @@ class Alerter(private val mContext: Context) : FrameLayout(mContext) {
         private const val TAG = "Alerter"
         private const val ALERT_WIDTH = WindowManager.LayoutParams.MATCH_PARENT
         private const val ALERT_HEIGHT = 600
-        private const val DURATION = 1000L
     }
 }

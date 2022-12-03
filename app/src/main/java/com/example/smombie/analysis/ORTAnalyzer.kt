@@ -80,7 +80,7 @@ class ORTAnalyzer(
 
     companion object {
         val labels = listOf(
-            "SIDEWALK", "ROAD", "CROSSWALK", "STAIR"
+            "SIDEWALK", "ROAD", "CROSSWALK", "STAIR", "DOOR"
         )
     }
 }

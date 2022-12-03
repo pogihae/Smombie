@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -17,6 +18,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import com.example.smombie.R
 import com.example.smombie.ui.Alerter
+import com.example.smombie.util.IMAGE_SIZE_X
+import com.example.smombie.util.IMAGE_SIZE_Y
 import kotlinx.coroutines.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -51,7 +54,7 @@ class AnalysisService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         if (::alerter.isInitialized) {
-            alerter.hide()
+            alerter.remove()
         }
     }
 
@@ -86,7 +89,7 @@ class AnalysisService : LifecycleService() {
 
     private suspend fun createOrtSession(): OrtSession? {
         return withContext(Dispatchers.IO) {
-            val model = resources.openRawResource(R.raw.test).readBytes()
+            val model = resources.openRawResource(R.raw.test_door).readBytes()
             ortEnv.createSession(model)
         }
     }
@@ -100,7 +103,9 @@ class AnalysisService : LifecycleService() {
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setTargetResolution(Size(IMAGE_SIZE_X, IMAGE_SIZE_Y))
+                .build()
 
             try {
                 cameraProvider.unbindAll()
