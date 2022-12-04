@@ -8,6 +8,8 @@ import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.Animation
+import android.view.animation.Animation.AnimationListener
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -51,6 +53,18 @@ class Alerter(mContext: Context) : FrameLayout(mContext) {
         background = AppCompatResources.getDrawable(context, R.drawable.view_border)
         visibility = View.INVISIBLE
 
+        exitAnimation.setAnimationListener(object : AnimationListener {
+            override fun onAnimationStart(p0: Animation?) {
+            }
+
+            override fun onAnimationEnd(p0: Animation?) {
+                visibility = View.INVISIBLE
+            }
+
+            override fun onAnimationRepeat(p0: Animation?) {
+            }
+        })
+
         this.addView(imageView)
         this.addView(textView)
     }
@@ -79,7 +93,7 @@ class Alerter(mContext: Context) : FrameLayout(mContext) {
         Log.d(TAG, "View expired duration: ${System.currentTimeMillis() - startTime}")
         enterAnimation.setAnimationListener(null)
         imageView.startAnimation(exitAnimation)
-        visibility = View.INVISIBLE
+        //visibility = View.INVISIBLE
     }
 
     fun remove() {

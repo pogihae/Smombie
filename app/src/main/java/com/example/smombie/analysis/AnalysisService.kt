@@ -4,6 +4,8 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
@@ -38,6 +40,8 @@ class AnalysisService : LifecycleService() {
     private var alertCount = 0
     private var prevLabel = ""
 
+    private lateinit var ringtone: Ringtone
+
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
         return binder
@@ -46,6 +50,9 @@ class AnalysisService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         alerter = Alerter(this)
+        val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        ringtone = RingtoneManager.getRingtone(applicationContext, notification)
+
         cameraController = LifecycleCameraController(this)
         cameraController.bindToLifecycle(this)
         startCamera()
@@ -76,12 +83,18 @@ class AnalysisService : LifecycleService() {
         }
 
         Handler(Looper.getMainLooper()).post {
-            if (alertCount > 5) {
+            if (alertCount > 2) {
                 if (result.detectedLabel == ORTAnalyzer.labels[0]) {
                     //alerter.show(bitmap, result.detectedLabel)
                     alerter.hide()
+                    if (ringtone.isPlaying) {
+                        ringtone.stop()
+                    }
                 } else {
                     alerter.show(bitmap, result.detectedLabel)
+                    if (ringtone.isPlaying.not()) {
+                        ringtone.play()
+                    }
                 }
             }
         }
