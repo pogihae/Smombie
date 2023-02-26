@@ -18,7 +18,7 @@ data class AnalysisResult(
 
 class ORTAnalyzer(
     private val ortSession: OrtSession?,
-    private val updateUICallback: (AnalysisResult, Bitmap) -> Unit
+    private val updateUICallback: (AnalysisResult) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private fun softMax(modelResult: FloatArray): FloatArray {
@@ -63,12 +63,12 @@ class ORTAnalyzer(
                         @Suppress("UNCHECKED_CAST") val rawOutput =
                             ((output?.get(0)?.value) as Array<FloatArray>)[0]
                         val result = softMax(rawOutput).withIndex().maxBy { it.value }
-                        analysisResult.detectedLabel = labels[result.index]
+                        analysisResult.detectedLabel = LABELS[result.index]
                         analysisResult.detectedScore = result.value
                     }
                 }
             }
-            updateUICallback(analysisResult, bitmap)
+            updateUICallback(analysisResult)
         }
 
         image.close()
@@ -79,8 +79,11 @@ class ORTAnalyzer(
     }
 
     companion object {
-        val labels = listOf(
+        val LABELS = listOf(
             "SIDEWALK", "ROAD", "CROSSWALK", "STAIR", "DOOR"
+        )
+        val SAFE_LABELS = listOf(
+            "SIDEWALK"
         )
     }
 }

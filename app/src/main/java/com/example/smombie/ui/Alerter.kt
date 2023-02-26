@@ -1,133 +1,57 @@
 package com.example.smombie.ui
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.PixelFormat
 import android.util.Log
-import android.view.Gravity
-import android.view.View
-import android.view.WindowManager
-import android.view.animation.Animation
-import android.view.animation.Animation.AnimationListener
-import android.view.animation.AnimationUtils
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.TextView
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.view.GravityCompat
-import androidx.core.view.ViewCompat
-import com.example.smombie.R
+import androidx.camera.core.Preview
+import com.example.smombie.analysis.AnalysisResult
+import com.example.smombie.analysis.ORTAnalyzer
 
 
-class Alerter(mContext: Context) : FrameLayout(mContext) {
-    private val imageView: ImageView = ImageView(context)
-    private val textView: TextView = TextView(context)
+class Alerter(context: Context, preview: Preview) {
+    private val textView = AlertTextView(context)
+    private val previewView = AlertPreviewView(context)
 
-    private val enterAnimation = AnimationUtils.loadAnimation(
-        context,
-        R.anim.alerter_slide_in_from_top
-    )
-    private val exitAnimation = AnimationUtils.loadAnimation(
-        context,
-        R.anim.alerter_slide_out_to_top
-    )
-
-    private val windowManager: WindowManager = context.getSystemService(WindowManager::class.java)
-
-    private var isShowing: Boolean = false
-    private var startTime: Long = 0L
+    private var currentView: AlertView = previewView
 
     init {
-        addOverlayView(
-            this, ALERT_WIDTH, ALERT_HEIGHT, Gravity.TOP
-        )
-        imageView.scaleType = ImageView.ScaleType.CENTER_CROP
-        textView.apply {
-            textSize = 30.0f
-            setTextColor(Color.RED)
-            text = ""
-            gravity = Gravity.CENTER
+        textView.setOnClickListener {
+            hide()
+            currentView = previewView
+            previewView.show()
         }
-
-        background = AppCompatResources.getDrawable(context, R.drawable.view_border)
-        visibility = View.INVISIBLE
-
-        exitAnimation.setAnimationListener(object : AnimationListener {
-            override fun onAnimationStart(p0: Animation?) {
-            }
-
-            override fun onAnimationEnd(p0: Animation?) {
-                visibility = View.INVISIBLE
-            }
-
-            override fun onAnimationRepeat(p0: Animation?) {
-            }
-        })
-
-        this.addView(imageView)
-        this.addView(textView)
+        previewView.setOnClickListener {
+            hide()
+            currentView = textView
+            textView.show()
+        }
+        previewView.preview = preview
     }
 
-    fun show(image: Bitmap?, label: String) {
-        if (image == null) {
-            return
-        }
-        visibility = View.VISIBLE
-
-        imageView.setImageBitmap(image)
-        textView.text = label
-
-        startTime += 1L
-        if (!isShowing) {
-            imageView.startAnimation(enterAnimation)
-            isShowing = true
-        }
-        Log.d(TAG, "New Alert: $startTime")
-        Log.d(TAG, startTime.toString())
+    fun show() {
+        currentView.show()
     }
 
     fun hide() {
-        if (isShowing.not()) return
-        isShowing = false
-        Log.d(TAG, "View expired duration: ${System.currentTimeMillis() - startTime}")
-        enterAnimation.setAnimationListener(null)
-        imageView.startAnimation(exitAnimation)
-        //visibility = View.INVISIBLE
+        currentView.hide()
     }
 
-    fun remove() {
-        windowManager.removeViewImmediate(this)
-    }
+    //todo change view
+    fun update(result: AnalysisResult) {
+        Log.d(TAG, "DETECTED: ${result.detectedLabel} with ${result.detectedScore}")
 
-    private fun addOverlayView(
-        view: View,
-        width: Int,
-        height: Int,
-        gravity: Int,
-        xPos: Int = 0,
-        yPos: Int = 0,
-        format: Int = PixelFormat.TRANSLUCENT
-    ) {
-        val layoutParams = WindowManager.LayoutParams(
-            width,
-            height,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            format
-        ).apply {
-            this.gravity =
-                GravityCompat.getAbsoluteGravity(gravity, ViewCompat.LAYOUT_DIRECTION_LTR)
-            this.x = xPos
-            this.y = yPos
+        if (result.detectedScore < THRESH_HOLD) {
+            return
         }
 
-        windowManager.addView(view, layoutParams)
+        if (result.detectedLabel in ORTAnalyzer.SAFE_LABELS) {
+            currentView.safe()
+        } else {
+            currentView.hazard()
+        }
     }
 
     companion object {
         private const val TAG = "Alerter"
-        private const val ALERT_WIDTH = WindowManager.LayoutParams.MATCH_PARENT
-        private const val ALERT_HEIGHT = 600
+        private const val THRESH_HOLD = 0.55
     }
 }

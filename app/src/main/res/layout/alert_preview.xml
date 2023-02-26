@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="150dp"
+    android:layout_marginStart="8dp"
+    android:layout_marginEnd="8dp">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/border" />
+
+    <View
+        android:id="@+id/color_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.5"
+        android:background="#FF0000"
+        android:visibility="gone" />
+
+</FrameLayout>
