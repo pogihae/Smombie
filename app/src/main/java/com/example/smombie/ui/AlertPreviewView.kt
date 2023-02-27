@@ -59,14 +59,10 @@ class AlertPreviewView(context: Context, attrs: AttributeSet? = null) : AlertVie
     }
 
     override fun hazard() {
-        super.hazard()
-        // todo handler 최적화 필요할 때 하나만
-        mHandler.removeCallbacks(blinkRunnable)
         mHandler.postDelayed(blinkRunnable, 500)
     }
 
     override fun safe() {
-        super.safe()
         overlayView.visibility = View.GONE
         mHandler.removeCallbacks(blinkRunnable)
     }

@@ -22,12 +22,10 @@ class AlertTextView(context: Context, attrs: AttributeSet? = null) : AlertView(c
     }
 
     override fun safe() {
-        super.safe()
         setColorAndText(Color.GREEN, "SAFE")
     }
 
     override fun hazard() {
-        super.hazard()
         setColorAndText(Color.RED, "WARNING")
     }
 

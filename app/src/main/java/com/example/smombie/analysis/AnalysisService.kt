@@ -9,6 +9,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import android.util.Size
+import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -18,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import com.example.smombie.R
 import com.example.smombie.ui.Alerter
+import com.example.smombie.ui.MainActivity
 import com.example.smombie.util.IMAGE_SIZE_X
 import com.example.smombie.util.IMAGE_SIZE_Y
 import kotlinx.coroutines.*
@@ -41,6 +43,8 @@ class AnalysisService : LifecycleService() {
 
     private lateinit var alerter: Alerter
 
+    var isRunning = false
+
     //onBind when??
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
@@ -49,10 +53,24 @@ class AnalysisService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        //why context can only init in here?
         cameraController = LifecycleCameraController(this)
         startCamera()
         alerter = Alerter(this, preview)
         alerter.show()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, intent?.action.toString())
+        if (intent?.action == MainActivity.ACTION_STOP) {
+            isRunning = false
+            alerter.hide()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        isRunning = true
+        return super.onStartCommand(intent, flags, startId)
     }
 
     private fun startCamera() {
@@ -87,19 +105,33 @@ class AnalysisService : LifecycleService() {
 
     private suspend fun createOrtSession(): OrtSession? {
         return withContext(Dispatchers.IO) {
-            val model = resources.openRawResource(R.raw.test_door).readBytes()
-            ortEnv.createSession(model)
+            try {
+                val model = resources.openRawResource(R.raw.test_door).readBytes()
+                ortEnv.createSession(model)
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@AnalysisService,
+                    "ERROR ON READ MODEL", Toast.LENGTH_LONG
+                ).show()
+                stopSelf()
+                null
+            }
         }
     }
 
     private fun updateUI(result: AnalysisResult) {
+        if (result.detectedScore < THRESH_HOLD) return
+
+        val isSafe = result.detectedLabel in ORTAnalyzer.SAFE_LABELS
+
         uiHandler.post {
-            alerter.update(result)
+            alerter.updateState(isSafe)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning = false
         alerter.hide()
     }
 
@@ -109,6 +141,7 @@ class AnalysisService : LifecycleService() {
 
     companion object {
         private const val TAG = "AnalysisService"
+        private const val THRESH_HOLD = 0.55
 
     }
 }

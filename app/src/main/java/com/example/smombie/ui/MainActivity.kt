@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
+import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,15 +21,18 @@ import androidx.core.content.ContextCompat
 import com.example.smombie.R
 import com.example.smombie.analysis.AnalysisService
 
+//todo caemra on off
 class MainActivity : AppCompatActivity() {
     private var analysisService: AnalysisService? = null
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as AnalysisService.LocalBinder
             analysisService = binder.getService()
+            startButton.isActivated = analysisService?.isRunning?.not() ?: false
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
+            Log.d("MAIN", "SERVICE DISCONNECTED")
             analysisService = null
         }
     }
@@ -128,15 +132,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun createForegroundNotification(): Notification {
         val stopIntent =
-            Intent(this, MainActivity::class.java).apply {
+            Intent(this, AnalysisService::class.java).apply {
                 action = ACTION_STOP
             }
 
         // TODO 종료 Intent 수정
         val stopPendingIntent: PendingIntent =
             PendingIntent.getService(
-                this, 0, stopIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                applicationContext, 0, stopIntent,
+                PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
         val stopAction: Notification.Action = Notification.Action
