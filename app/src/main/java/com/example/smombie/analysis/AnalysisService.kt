@@ -16,6 +16,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.LifecycleCameraController
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
 import com.example.smombie.R
 import com.example.smombie.ui.Alerter
@@ -35,7 +36,6 @@ class AnalysisService : LifecycleService() {
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .setTargetResolution(Size(IMAGE_SIZE_X, IMAGE_SIZE_Y))
         .build()
-    private val preview = Preview.Builder().build()
 
     private val ortEnv: OrtEnvironment = OrtEnvironment.getEnvironment()
     private val analysisExecutor = Executors.newSingleThreadExecutor()
@@ -56,7 +56,7 @@ class AnalysisService : LifecycleService() {
         //why context can only init in here?
         cameraController = LifecycleCameraController(this)
         startCamera()
-        alerter = Alerter(this, preview)
+        alerter = Alerter(this)
         alerter.show()
     }
 
@@ -84,7 +84,7 @@ class AnalysisService : LifecycleService() {
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, imageAnalysis, preview
+                    this as LifecycleOwner, cameraSelector, imageAnalysis
                 )
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)

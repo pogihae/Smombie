@@ -3,21 +3,14 @@ package com.example.smombie.ui
 import android.content.Context
 import android.util.Log
 import androidx.camera.core.Preview
-import com.example.smombie.analysis.AnalysisResult
-import com.example.smombie.analysis.ORTAnalyzer
 
 
-class Alerter(context: Context, preview: Preview) {
+class Alerter(context: Context) {
     private val textView = AlertTextView(context)
     private val previewView = AlertPreviewView(context)
-    private var currentView: AlertView = previewView
+    private var currentView: OverlayView = previewView
 
-    init {
-        previewView.preview = preview
-
-        textView.setOnClickListener { changeView(previewView) }
-        previewView.setOnClickListener { changeView(textView) }
-    }
+    private var isSafe = true
 
     fun show() {
         currentView.show()
@@ -28,16 +21,23 @@ class Alerter(context: Context, preview: Preview) {
     }
 
     fun updateState(isSafe: Boolean) {
-        currentView.setState(isSafe)
-    }
+        if (this.isSafe == isSafe) return
 
-    private fun changeView(targetView: AlertView) {
-        val prevState = currentView.isSafe
+        Log.d(TAG, "$isSafe")
 
-        currentView.hide()
-        currentView = targetView
-        currentView.setState(prevState)
-        currentView.show()
+        if (isSafe) {
+            previewView.hide()
+            textView.show()
+            currentView = textView
+            previewView.stopBlink()
+        } else {
+            textView.hide()
+            previewView.show()
+            previewView.startBlink()
+            currentView = previewView
+        }
+
+        this.isSafe = isSafe
     }
 
     companion object {
