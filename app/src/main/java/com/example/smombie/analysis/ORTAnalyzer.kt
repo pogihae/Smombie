@@ -11,9 +11,8 @@ import java.util.*
 import kotlin.math.exp
 
 data class AnalysisResult(
-    var detectedLabel: String = "UNKNOWN",
-    var detectedScore: Float = 0.0f,
-    var processTimeMs: Long = 0
+    val detectedLabel: String,
+    val isSafe: Boolean
 )
 
 class ORTAnalyzer(
@@ -43,32 +42,31 @@ class ORTAnalyzer(
     override fun analyze(image: ImageProxy) {
         val imgBitmap = image.toBitmap()
         val rawBitmap =
-            imgBitmap?.let { Bitmap.createScaledBitmap(it, IMAGE_SIZE_X, IMAGE_SIZE_Y, false) }
+            imgBitmap.let { Bitmap.createScaledBitmap(it, IMAGE_SIZE_X, IMAGE_SIZE_Y, false) }
         val bitmap = rawBitmap?.rotate(image.imageInfo.rotationDegrees.toFloat())
 
-        if (bitmap != null) {
-            val analysisResult = AnalysisResult()
+        var analysisResult: AnalysisResult? = null
 
+        if (bitmap != null) {
             val imgData = preProcess(bitmap)
             val inputName = ortSession?.inputNames?.iterator()?.next()
             val shape = longArrayOf(1, 3, IMAGE_SIZE_X.toLong(), IMAGE_SIZE_Y.toLong())
             val env = OrtEnvironment.getEnvironment()
             env.use {
                 val tensor = OnnxTensor.createTensor(env, imgData, shape)
-                val startTime = SystemClock.uptimeMillis()
                 tensor.use {
                     val output = ortSession?.run(Collections.singletonMap(inputName, tensor))
                     output.use {
-                        analysisResult.processTimeMs = SystemClock.uptimeMillis() - startTime
                         @Suppress("UNCHECKED_CAST") val rawOutput =
                             ((output?.get(0)?.value) as Array<FloatArray>)[0]
                         val result = softMax(rawOutput).withIndex().maxBy { it.value }
-                        analysisResult.detectedLabel = LABELS[result.index]
-                        analysisResult.detectedScore = result.value
+                        val label = LABELS[result.index]
+                        val isSafe = label in SAFE_LABELS && result.value > THRESHOLD
+                        analysisResult = AnalysisResult(label, isSafe)
                     }
                 }
             }
-            updateUICallback(analysisResult)
+            analysisResult?.let(updateUICallback)
         }
 
         image.close()
@@ -85,5 +83,6 @@ class ORTAnalyzer(
         val SAFE_LABELS = listOf(
             "SIDEWALK"
         )
+        private const val THRESHOLD = 0.7f
     }
 }
