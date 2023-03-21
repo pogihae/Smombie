@@ -1,4 +1,4 @@
-package com.example.smombie.analysis
+package com.example.smombie.analysis.camera
 
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
@@ -8,14 +8,13 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.util.Size
-import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.LifecycleCameraController
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.*
+import androidx.lifecycle.LifecycleOwner
 import com.example.smombie.R
+import com.example.smombie.analysis.Analyzer
 import com.example.smombie.ui.AlertPreviewView
 import com.example.smombie.ui.AlertTextView
 import com.example.smombie.ui.OverlayView
@@ -27,15 +26,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-class CameraAnalyzer(private val context: Context, private val lifecycle: Lifecycle) :
-    LifecycleOwner, DefaultLifecycleObserver {
+class CameraAnalyzer(
+    private val context: Context
+) : Analyzer(context as LifecycleOwner) {
 
-    private val lifecycleRegistry: LifecycleRegistry
+    private val alertPreviewView = AlertPreviewView(context, this as LifecycleOwner)
+    private val alertTextView = AlertTextView(context, this as LifecycleOwner)
 
-    private val alertPreviewView: AlertPreviewView
-    private val alertTextView: AlertTextView
-    private var currentView: OverlayView
-
+    private var currentView: OverlayView = alertPreviewView
     private var currentState: Boolean = false
 
     private val imageAnalysis =
@@ -45,46 +43,27 @@ class CameraAnalyzer(private val context: Context, private val lifecycle: Lifecy
     private val uiHandler = Handler(Looper.getMainLooper())
 
     init {
-        lifecycle.addObserver(this)
-        lifecycleRegistry = LifecycleRegistry(this)
-
-        alertPreviewView = AlertPreviewView(context, lifecycle)
-        alertTextView = AlertTextView(context, lifecycle)
-        currentView = alertPreviewView
-
         startCamera()
-
-        lifecycleRegistry.currentState = Lifecycle.State.CREATED
     }
 
-    fun startAnalyze() {
+    override fun start() {
+        super.start()
         currentView.show()
-        lifecycleRegistry.currentState = Lifecycle.State.STARTED
     }
 
-    fun stopAnalyze() {
+    override fun stop() {
+        super.stop()
         currentView.hide()
-        lifecycleRegistry.currentState = Lifecycle.State.CREATED
-    }
-
-    override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
     }
 
     private fun startCamera() {
-        LifecycleCameraController(context).apply {
-            enableTorch(false)
-            cameraControl?.cancelFocusAndMetering()
-        }.bindToLifecycle(this)
-
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        cameraProviderFuture.addListener( {
+        cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                cameraProvider.unbindAll()
+                //cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     this as LifecycleOwner, cameraSelector, imageAnalysis
                 )
@@ -118,6 +97,7 @@ class CameraAnalyzer(private val context: Context, private val lifecycle: Lifecy
 
     private fun updateUI(result: AnalysisResult) {
         uiHandler.post {
+            Log.d(TAG, result.toString())
             if (result.isSafe == currentState) return@post
 
             if (result.isSafe) {
@@ -133,10 +113,6 @@ class CameraAnalyzer(private val context: Context, private val lifecycle: Lifecy
 
             currentState = result.isSafe
         }
-    }
-
-    override fun getLifecycle(): Lifecycle {
-        return lifecycleRegistry
     }
 
     companion object {

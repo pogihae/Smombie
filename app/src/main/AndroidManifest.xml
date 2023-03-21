@@ -5,11 +5,16 @@
     <uses-feature android:name="android.hardware.camera.any" />
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".CameraApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -19,6 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Smombie"
         tools:targetApi="31">
+
         <service
             android:name="com.example.smombie.analysis.AnalysisService"
             android:enabled="true"
@@ -26,7 +32,7 @@
             android:foregroundServiceType="camera" />
 
         <activity
-            android:name="com.example.smombie.ui.MainActivity"
+            android:name="com.example.smombie.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

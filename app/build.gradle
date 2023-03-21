@@ -52,6 +52,9 @@ dependencies {
     // lifecycle service
     implementation 'androidx.lifecycle:lifecycle-service:2.5.1'
 
+    // ViewModel
+    implementation "androidx.activity:activity-ktx:1.6.1"
+
     // ONNX
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:latest.release'
 }

@@ -1,8 +1,7 @@
-package com.example.smombie.analysis
+package com.example.smombie.analysis.camera
 
 import ai.onnxruntime.*
 import android.graphics.Bitmap
-import android.os.SystemClock
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.example.smombie.*

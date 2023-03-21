@@ -1,49 +1,84 @@
 package com.example.smombie.analysis
 
+import android.app.Notification
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import androidx.lifecycle.LifecycleService
-import com.example.smombie.ui.MainActivity
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import com.example.smombie.R
+import com.example.smombie.analysis.camera.CameraAnalyzer
 
-//todo fix 처음 시작 시 분석 안함
 class AnalysisService : LifecycleService() {
     private val binder = LocalBinder()
 
+    private var _isRunning: MutableLiveData<Boolean> = MutableLiveData()
+    val isRunning: LiveData<Boolean> get() = _isRunning
+
+    private val notification by lazy { createForegroundNotification() }
+
     private lateinit var cameraAnalyzer: CameraAnalyzer
-
-    var isRunning = false
-
-    //onBind when??
-    override fun onBind(intent: Intent): IBinder {
-        super.onBind(intent)
-        return binder
-    }
 
     override fun onCreate() {
         super.onCreate()
-        //why context can only init in here?
-        cameraAnalyzer = CameraAnalyzer(this, lifecycle)
-        cameraAnalyzer.startAnalyze()
+        cameraAnalyzer = CameraAnalyzer(this)
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        super.onBind(intent)
+        _isRunning.value = true
+        startForeground(1, notification)
+        cameraAnalyzer.start()
+        return binder
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, intent?.action.toString())
-        if (intent?.action == MainActivity.ACTION_STOP) {
-            isRunning = false
-            cameraAnalyzer.stopAnalyze()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+        if (intent?.action == ACTION_STOP) {
+            stopService()
             return START_NOT_STICKY
         }
-        isRunning = true
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    fun stopService() {
+        _isRunning.value = false
+        cameraAnalyzer.stop()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    private fun createForegroundNotification(): Notification {
+        val stopIntent =
+            Intent(this, AnalysisService::class.java).apply {
+                action = ACTION_STOP
+            }
+
+        val stopPendingIntent: PendingIntent =
+            PendingIntent.getService(
+                applicationContext, 0, stopIntent,
+                PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+        val stopAction: Notification.Action = Notification.Action
+            .Builder(null, "stop", stopPendingIntent).build()
+
+        val notification = Notification.Builder(this, getString(R.string.CHANNEL_ID))
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText("${getString(R.string.app_name)} is working")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .addAction(stopAction)
+            .setOngoing(false)
+            .build()
+
+        return notification
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        isRunning = false
+        _isRunning.value = false
+        cameraAnalyzer.stop()
     }
 
     inner class LocalBinder : Binder() {
@@ -52,5 +87,6 @@ class AnalysisService : LifecycleService() {
 
     companion object {
         private const val TAG = "AnalysisService"
+        private const val ACTION_STOP = "Analyzing.stop"
     }
 }

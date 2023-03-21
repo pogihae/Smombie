@@ -4,16 +4,15 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.util.AttributeSet
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.drawable.DrawableCompat
-import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import com.example.smombie.R
 
 @SuppressLint("ViewConstructor")
-class AlertTextView(context: Context, lifecycle: Lifecycle) : OverlayView(context, lifecycle) {
+class AlertTextView(context: Context, lifecycle: LifecycleOwner) : OverlayView(context, lifecycle) {
     private val textView: TextView
     private val mBackground: Drawable
 
