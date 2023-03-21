@@ -1,8 +1,8 @@
 package com.example.smombie.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Looper
-import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import androidx.camera.core.CameraSelector
@@ -13,7 +13,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.example.smombie.R
 
-class AlertPreviewView(context: Context, attrs: AttributeSet? = null) : OverlayView(context, attrs) {
+@SuppressLint("ViewConstructor")
+class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
+    OverlayView(context, lifecycle) {
     private val preview: Preview
 
     private val previewView: PreviewView
@@ -25,11 +27,13 @@ class AlertPreviewView(context: Context, attrs: AttributeSet? = null) : OverlayV
     init {
         inflate(context, R.layout.alert_preview, this)
 
-        preview = Preview.Builder().build()
         previewView = findViewById(R.id.preview)
-        blinkView = findViewById(R.id.color_overlay)
-
+        previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         previewView.scaleType = PreviewView.ScaleType.FILL_START
+
+        preview = Preview.Builder().build()
+
+        blinkView = findViewById(R.id.color_overlay)
 
         blinkRunnable = object : Runnable {
             override fun run() {
@@ -46,29 +50,34 @@ class AlertPreviewView(context: Context, attrs: AttributeSet? = null) : OverlayV
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
             bindPreview(cameraProvider)
+            Log.d("BPreview", "${cameraProvider.isBound(preview)}")
         }, ContextCompat.getMainExecutor(context))
     }
 
     override fun show() {
-        preview.setSurfaceProvider(previewView.surfaceProvider)
         super.show()
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            //bindPreview(cameraProvider)
+            Log.d("SPreview", "${cameraProvider.isBound(preview)}")
+        }, ContextCompat.getMainExecutor(context))
+        //preview.setSurfaceProvider(previewView.surfaceProvider)
+        startBlink()
     }
 
     override fun hide() {
-        preview.setSurfaceProvider(null)
         super.hide()
+        //preview.setSurfaceProvider(null)
+        stopBlink()
     }
 
-    fun startBlink() {
-        if (isShown.not()) {
-            Log.d("AlertPreview", "NOT SHOWN STATE")
-            return
-        }
+    private fun startBlink() {
         stopBlink()
         blinkHandler.post(blinkRunnable)
     }
 
-    fun stopBlink() {
+    private fun stopBlink() {
         blinkView.visibility = View.GONE
         blinkHandler.removeCallbacksAndMessages(null)
     }
@@ -76,9 +85,6 @@ class AlertPreviewView(context: Context, attrs: AttributeSet? = null) : OverlayV
     private fun bindPreview(cameraProvider: ProcessCameraProvider) {
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
         preview.setSurfaceProvider(previewView.surfaceProvider)
-        cameraProvider.bindToLifecycle(context as LifecycleOwner, cameraSelector, preview).apply {
-            cameraControl.enableTorch(false)
-            cameraControl.cancelFocusAndMetering()
-        }
+        cameraProvider.bindToLifecycle(mLifecycle, cameraSelector, preview)
     }
 }
