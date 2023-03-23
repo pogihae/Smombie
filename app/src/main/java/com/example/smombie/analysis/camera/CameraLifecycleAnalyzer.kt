@@ -14,7 +14,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.example.smombie.R
-import com.example.smombie.analysis.Analyzer
+import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.ui.AlertPreviewView
 import com.example.smombie.ui.AlertTextView
 import com.example.smombie.ui.OverlayView
@@ -26,9 +26,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-class CameraAnalyzer(
+class CameraLifecycleAnalyzer(
     private val context: Context
-) : Analyzer(context as LifecycleOwner) {
+) : LifecycleAnalyzer(context as LifecycleOwner) {
 
     private val alertPreviewView = AlertPreviewView(context, this as LifecycleOwner)
     private val alertTextView = AlertTextView(context, this as LifecycleOwner)

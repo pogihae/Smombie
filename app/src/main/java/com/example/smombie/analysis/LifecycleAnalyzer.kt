@@ -5,7 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 
-abstract class Analyzer(parentLifecycleOwner: LifecycleOwner) : LifecycleOwner,
+abstract class LifecycleAnalyzer(parentLifecycleOwner: LifecycleOwner) : LifecycleOwner,
     DefaultLifecycleObserver {
 
     private val lifecycleRegistry = LifecycleRegistry(this)

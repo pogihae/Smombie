@@ -82,6 +82,6 @@ class ORTAnalyzer(
         val SAFE_LABELS = listOf(
             "SIDEWALK"
         )
-        private const val THRESHOLD = 0.7f
+        private const val THRESHOLD = 0.8f
     }
 }
