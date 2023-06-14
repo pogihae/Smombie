@@ -16,11 +16,13 @@ import torchvision
 from torchvision import models, transforms
 import onnxruntime as rt
 from efficientnet_pytorch import EfficientNet
+
 '''
 torch.manual_seed(1234)
 np.random.seed(1234)
 random.seed(1234)
 '''
+
 class ImageTransform():
 
     def __init__(self, resize, mean, std):
@@ -99,7 +101,7 @@ class Dataset(data.Dataset):
 
         return img_transformed, label
 
-def test_and_visualize_model(model,dataloaders_dict, phase = 'tests', num_images=36):
+def test_and_visualize(model,dataloaders_dict, phase = 'tests', num_images=36):
     # phase = 'train', 'valid', 'tests'
     
     was_training = model.training
@@ -153,8 +155,13 @@ def test_and_visualize_model(model,dataloaders_dict, phase = 'tests', num_images
     plt.show()
     model.train(mode=was_training);  # 다시 train모드로
 
+def test_and_visualize_model(name_of_model):
+    net = EfficientNet.from_pretrained('efficientnet-b0',num_classes = 5)
+    model_state_dict = torch.load(name_of_model)
+    net.load_state_dict(model_state_dict)
+    test_and_visualize(net,dataloaders_dict, phase = 'tests')
 
-def train_model(net, dataloaders_dict, criterion, optimizer, num_epochs, num):
+def train_model(net, dataloaders_dict, criterion, optimizer, num_epochs, hyp):
     history = {'val_loss': [],
                'val_acc': []}
 
@@ -207,7 +214,7 @@ def train_model(net, dataloaders_dict, criterion, optimizer, num_epochs, num):
 
             if(phase == 'valid'):
                 if(epoch > 1) and (max(history['val_acc']) < epoch_acc) :
-                    torch.save(net.state_dict(), 'final+++' + str(num) + '.pt')
+                    torch.save(net.state_dict(), 'result' + hyp + '.pt')
                 history['val_acc'].append(epoch_acc.item())
                 history['val_loss'].append(epoch_loss)
 
@@ -249,6 +256,48 @@ def visualize(epochs ,history):
     plt.savefig('acc1.png')
     plt.show()
 
+def to_numpy(tensor): 
+   return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy() 
+
+def test(model,onnx_model):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    x = torch.rand(1, 3, 224, 224, requires_grad=True).to(device)
+    out_torch = model(x)
+    
+    ort_session = rt.InferenceSession(onnx_model)
+    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
+    ort_outs = ort_session.run(None, ort_inputs)
+    
+    np.testing.assert_allclose(to_numpy(out_torch), ort_outs[0], rtol=1e-03, atol=1e-05)
+    print("Exported model has been tested with ONNXRuntime, and the result looks good!")
+
+def export_onnx(name_of_model):
+    net = EfficientNet.from_pretrained('efficientnet-b0',num_classes = 5)
+    model_state_dict = torch.load(name_of_model)
+    net.load_state_dict(model_state_dict)
+
+    net.set_swish(memory_efficient=False)
+    net.eval()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    net = net.to(device)
+
+    output_onnx = name_of_model[:-3] + '.onnx'
+
+    input_names = ["input"]
+
+    output_names = ["output"]
+    dynamic_axes = {'input_0' : {0 : 'batch_size'},
+                    'output_0' : {0 : 'batch_size'}}
+
+    inputs = torch.randn(1, 3, 224, 224, requires_grad=True).to(device)
+
+    torch_out = torch.onnx._export(net, inputs, output_onnx, export_params=True, verbose=False,
+                                   input_names=input_names, output_names=output_names, opset_version=10
+                                   #,dynamic_axes = dynamic_axes
+                                   )
+
+    test(net, output_onnx)
+
 num_show_img = 5
 
 class_names = {
@@ -258,7 +307,6 @@ class_names = {
     "3": "stair", 
     "4": "door"  
 }
-
 
 train_list = make_datapath_list(phase="train")
 valid_list = make_datapath_list(phase="valid")
@@ -294,8 +342,6 @@ use_pretrained = True
 
 criterion = nn.CrossEntropyLoss()
 
-#0.001,0.95
-
 plt.subplot(3,1,1)
 plt.ylabel("train set")
 inputs, classes = next(iter(train_dataloader))
@@ -317,92 +363,53 @@ imshow(out, title=[class_names[str(int(x))] for x in classes[:num_show_img]])
 plt.tight_layout()
 plt.show()
 
-list_lr = [0.001]
-list_op = [#"sgd", 
-           "adam"]
+
+#test_and_visualize_model("final+++0.001adam.pt")
+#export_onnx("final+++0.001adam.pt")
+
+#For momentum, this is specified as the value of beta 1 for the adam family of optimizers. 
+#If you want to specify the value of beta 2 as well, store it as a list of tuples like (0.9,0.999)
+
+#We only support five: SGD, Adam, AdamW, NAdam, and RAdam.
+#If you enter a different optimizer, it will be ignored and trained with SGD.
+
+list_lr = [0.01, 0.005, 0.001]
+list_mo = [0.99, 0.95, 0.9]
+list_op = ["sgd","adam","adamw","nadam","radam"] 
+
+freeze_layer = False
+
+num_epochs = 3
 
 result = []
-num_epochs = 300
 for op in list_op:
     for lr in list_lr:
-        net = EfficientNet.from_pretrained('efficientnet-b0',num_classes = 5)
-        net._dropout = nn.Dropout(0.5)
+        for mo in list_mo:
+            net = EfficientNet.from_pretrained('efficientnet-b0',num_classes = 5)
+            net._dropout = nn.Dropout(0.5)
 
-        print("learing late :" + str(lr)+" momentum :"+op)
-        '''
-        for name, param in net.named_parameters():
-            if '_fc' not in name:
-                param.requires_grad = False
-        '''
-        if op == "adam" :
-            optimizer = optim.Adam(net.parameters(),lr=lr)
-        else :
-            optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.95)
+            print("learing late :" + str(lr) + " momentum :" + str(mo) + ' optimizer :'+ op)
 
-        history = train_model(net, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs, num = str(lr) + op)
-        result.append([max(history['val_acc']),lr,op])
+            if freeze_layer :
+                for name, param in net.named_parameters():
+                    if '_fc' not in name:
+                        param.requires_grad = False
 
-visualize(num_epochs, history)
+            if op == "adam" :
+                optimizer = optim.Adam(net.parameters(),lr=lr, betas=mo if isinstance(mo, tuple) else (mo,0.999))
+            elif op == "adamw" :
+                optimizer = optim.AdamW(net.parameters(),lr=lr, betas=mo if isinstance(mo, tuple) else (mo,0.999))
+            elif op == "nadam" :
+                optimizer = optim.NAdam(net.parameters(),lr=lr, betas=mo if isinstance(mo, tuple) else (mo,0.999))
+            elif op == "radam" :
+                optimizer = optim.RAdam(net.parameters(),lr=lr, betas=mo if isinstance(mo, tuple) else (mo,0.999))
+            else :
+                optimizer = optim.SGD(net.parameters(), lr=lr, momentum=mo)
+
+            history = train_model(net, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs, hyp = "lr" + str(lr) + "mo" + str(mo) + "op" + op)
+            result.append([max(history['val_acc']),lr,mo,op])
+            visualize(num_epochs, history)
+
 result.sort(key=lambda x: x[0])
 for item in result:
-    print('Acc: {:.4f} lr: {} momentum: {}'.format(item[0],item[1],item[2]))
-
-
-
-
-
-
-    '''
-net = EfficientNet.from_pretrained('efficientnet-b0',num_classes = 5)
-model_state_dict = torch.load("./final+++0.0095.pt")
-net.load_state_dict(model_state_dict)
-test_and_visualize_model(net,dataloaders_dict, phase = 'tests')
-'''
-
-'''
-net.set_swish(memory_efficient=False)
-net.eval()
-device = torch.device("cuda:0")
-net = net.to(device)
-
-output_onnx = 'test+++.onnx'
-
-input_names = ["input"]
-
-output_names = ["output"]
-'''
-'''
-output_names = ["sidewalk",      
-                "road", 
-                "crosswalk",  
-                "stair",
-                "door"]
-'''
-'''
-
-dynamic_axes = {'input_0' : {0 : 'batch_size'},
-                    'output_0' : {0 : 'batch_size'}}
-
-inputs = torch.randn(1, 3, 224, 224, requires_grad=True).to(device)
-
-torch_out = torch.onnx._export(net, inputs, output_onnx, export_params=True, verbose=False,
-                                   input_names=input_names, output_names=output_names, opset_version=10
-                                   #,dynamic_axes = dynamic_axes
-                                   )
-
-def to_numpy(tensor): 
-   return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy() 
-
-def test(model,onnx_model):
-    x = torch.rand(1, 3, 224, 224, requires_grad=True).to(device)
-    out_torch = model(x)
-    
-    ort_session = rt.InferenceSession(onnx_model)
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
-    ort_outs = ort_session.run(None, ort_inputs)
-    
-    np.testing.assert_allclose(to_numpy(out_torch), ort_outs[0], rtol=1e-03, atol=1e-05)
-    print("Exported model has been tested with ONNXRuntime, and the result looks good!")
-
-test(net,"test+++.onnx")
-'''
+    print('Acc: {:.4f} lr: {} momentum: {} optimizer: {}'.format(item[0],item[1],item[2],item[3]))
