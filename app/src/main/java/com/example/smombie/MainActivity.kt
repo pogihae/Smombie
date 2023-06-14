@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -28,10 +29,12 @@ class MainActivity : AppCompatActivity() {
             onBound = true
             analysisService.isRunning.observe(this@MainActivity) {
                 if (it) {
-                    startButton.text = "STOP"
+                    startButton.text = getString(R.string.stop)
+                    startButton.setBackgroundColor(Color.RED)
                     startButton.setOnClickListener { stopAnalysis() }
                 } else {
-                    startButton.text = "START"
+                    startButton.text = getString(R.string.start)
+                    startButton.setBackgroundColor(Color.GREEN)
                     startButton.setOnClickListener { startAnalysis() }
                 }
             }
@@ -69,10 +72,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-        if (onBound) {
-            unbindService(serviceConnection)
+    private fun startAnalysis() {
+        Intent(this@MainActivity, AnalysisService::class.java).also {
+            startService(it)
+        }
+    }
+
+    private fun stopAnalysis() {
+        Intent(this@MainActivity, AnalysisService::class.java).apply {
+            action = AnalysisService.ACTION_STOP
+        }.also {
+            startService(it)
         }
     }
 
@@ -117,23 +127,16 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun startAnalysis() {
-        Intent(this@MainActivity, AnalysisService::class.java).also {
-            startService(it)
-        }
-    }
-
-    private fun stopAnalysis() {
-        Intent(this@MainActivity, AnalysisService::class.java).apply {
-            action = AnalysisService.ACTION_STOP
-        }.also {
-            startService(it)
-        }
-    }
-
     private fun finishWithReason(reason: String) {
         Toast.makeText(this, reason, Toast.LENGTH_LONG).show()
         finish()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (onBound) {
+            unbindService(serviceConnection)
+        }
     }
 
     override fun onDestroy() {

@@ -19,12 +19,7 @@ class AnalysisService : LifecycleService() {
 
     private val notification by lazy { createForegroundNotification() }
 
-    private lateinit var cameraAnalyzer: CameraLifecycleAnalyzer
-
-    override fun onCreate() {
-        super.onCreate()
-        cameraAnalyzer = CameraLifecycleAnalyzer(this)
-    }
+    private val cameraAnalyzer: CameraLifecycleAnalyzer by lazy { CameraLifecycleAnalyzer(this) }
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)

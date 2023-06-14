@@ -63,7 +63,7 @@ class CameraLifecycleAnalyzer(
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                //cameraProvider.unbindAll()
+                cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     this as LifecycleOwner, cameraSelector, imageAnalysis
                 )
@@ -95,14 +95,25 @@ class CameraLifecycleAnalyzer(
         }
     }
 
+    // 추론 결과 횟수 저장
+    private val countMap: MutableMap<Boolean, Int> = mutableMapOf(
+        true to 0,
+        false to 0
+    )
+
+    private val REQUIRED_COUNT = 10
+
     private fun updateUI(result: AnalysisResult) {
         uiHandler.post {
-            Log.d(TAG, result.toString())
+            //Log.d(TAG, result.toString())
             if (result.isSafe == currentState) return@post
+
+            countMap[result.isSafe] = (countMap[result.isSafe] ?: 0) + 1
+            if (countMap[result.isSafe]!! < REQUIRED_COUNT) return@post
 
             if (result.isSafe) {
                 currentView.hide()
-                alertTextView.setColorAndText(Color.GREEN, result.detectedLabel)
+                alertTextView.setColorAndText(Color.YELLOW, result.detectedLabel)
                 currentView = alertTextView
                 currentView.show()
             } else {
@@ -111,6 +122,7 @@ class CameraLifecycleAnalyzer(
                 currentView.show()
             }
 
+            countMap[result.isSafe] = 0
             currentState = result.isSafe
         }
     }

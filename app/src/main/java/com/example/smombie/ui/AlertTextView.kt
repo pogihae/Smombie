@@ -20,7 +20,7 @@ class AlertTextView(context: Context, lifecycle: LifecycleOwner) : OverlayView(c
         textView = TextView(context)
         mBackground = AppCompatResources.getDrawable(context, R.drawable.rounded_corner)!!
         addView(textView)
-        setColorAndText(Color.GREEN, "SAFE")
+        setColorAndText(Color.YELLOW, "SAFE")
     }
 
     fun setColorAndText(@ColorInt colorInt: Int, newText: String) {

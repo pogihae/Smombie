@@ -24,6 +24,8 @@ class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
     private val blinkHandler = android.os.Handler(Looper.getMainLooper())
     private val blinkRunnable: Runnable
 
+    private var ready = false
+
     init {
         inflate(context, R.layout.alert_preview, this)
 
@@ -51,24 +53,28 @@ class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
             val cameraProvider = cameraProviderFuture.get()
             bindPreview(cameraProvider)
             Log.d("BPreview", "${cameraProvider.isBound(preview)}")
+            ready = true
         }, ContextCompat.getMainExecutor(context))
     }
 
     override fun show() {
         super.show()
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-            //bindPreview(cameraProvider)
-            Log.d("SPreview", "${cameraProvider.isBound(preview)}")
-        }, ContextCompat.getMainExecutor(context))
-        //preview.setSurfaceProvider(previewView.surfaceProvider)
+        if (ready.not()) {
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                bindPreview(cameraProvider)
+                Log.d("SPreview", "${cameraProvider.isBound(preview)}")
+            }, ContextCompat.getMainExecutor(context))
+        }
+
+        preview.setSurfaceProvider(previewView.surfaceProvider)
         startBlink()
     }
 
     override fun hide() {
         super.hide()
-        //preview.setSurfaceProvider(null)
+        preview.setSurfaceProvider(null)
         stopBlink()
     }
 

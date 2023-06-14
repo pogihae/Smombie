@@ -5,4 +5,6 @@
     <string name="CHANNEL_ID">SMOMBIE_NOTIFICATION_CHANNEL</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="stop">STOP</string>
+    <string name="start">START</string>
 </resources>
