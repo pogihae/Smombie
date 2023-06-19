@@ -88,7 +88,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestPermissions() {
         val perms = mutableListOf(
-            Manifest.permission.CAMERA
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
         ).apply {
             if (Build.VERSION.SDK_INT >= 33) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
