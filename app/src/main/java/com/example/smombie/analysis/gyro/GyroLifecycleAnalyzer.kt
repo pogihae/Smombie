@@ -7,16 +7,15 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.MutableLiveData
+import com.example.smombie.State
 import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.ui.AlertTextView
 import kotlin.math.abs
 
-class GyroLifecycleAnalyzer(private val context: Context) :
+class GyroLifecycleAnalyzer(private val context: Context, private val state: MutableLiveData<State>) :
     LifecycleAnalyzer(context as LifecycleOwner), SensorEventListener {
 
     private val alertTextView = AlertTextView(context, this as LifecycleOwner)
@@ -31,15 +30,11 @@ class GyroLifecycleAnalyzer(private val context: Context) :
         alertTextView.setColorAndText(Color.CYAN, "EX_WARNING")
     }
 
-    override fun start() {
-        super.start()
-        alertTextView.show()
+    override fun onStart() {
         sensorManager.registerListener(this, rotationVector, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
-    override fun stop() {
-        super.stop()
-        alertTextView.hide()
+    override fun onStop() {
         sensorManager.unregisterListener(this)
     }
 
@@ -70,7 +65,7 @@ class GyroLifecycleAnalyzer(private val context: Context) :
         val azimuthChange = abs(azimuth - prevAzimuth)
 
         if (azimuthChange > 5f) {
-            Log.d("GYRO", "STEP CHANGED")
+            state.value = State.HAZARD
         }
 
         prevAzimuth = azimuth

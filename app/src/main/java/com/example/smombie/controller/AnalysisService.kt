@@ -1,4 +1,4 @@
-package com.example.smombie.analysis
+package com.example.smombie.controller
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -19,7 +19,7 @@ class AnalysisService : LifecycleService() {
 
     private val notification by lazy { createForegroundNotification() }
 
-    private val cameraAnalyzer: CameraLifecycleAnalyzer by lazy { CameraLifecycleAnalyzer(this) }
+    private lateinit var analyzerController :AnalyzerController
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
@@ -34,14 +34,14 @@ class AnalysisService : LifecycleService() {
 
         _isRunning.value = true
         startForeground(1, notification)
-        cameraAnalyzer.start()
+        analyzerController.start()
 
         return super.onStartCommand(intent, flags, startId)
     }
 
     private fun stopService() {
         _isRunning.value = false
-        cameraAnalyzer.stop()
+        analyzerController.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

@@ -15,13 +15,18 @@ abstract class LifecycleAnalyzer(parentLifecycleOwner: LifecycleOwner) : Lifecyc
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
     }
 
-    open fun start() {
+    fun start() {
         lifecycleRegistry.currentState = Lifecycle.State.STARTED
+        onStart()
     }
 
-    open fun stop() {
+    fun stop() {
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        onStop()
     }
+
+    abstract fun onStart()
+    abstract fun onStop()
 
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)

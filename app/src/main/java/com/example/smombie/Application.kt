@@ -8,6 +8,7 @@ import androidx.camera.camera2.Camera2Config
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
 
+//todo 걷기 감지, MIC
 class CameraApplication : Application(), CameraXConfig.Provider {
     override fun onCreate() {
         super.onCreate()
