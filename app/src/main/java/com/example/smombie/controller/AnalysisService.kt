@@ -9,7 +9,6 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.smombie.R
-import com.example.smombie.analysis.camera.CameraLifecycleAnalyzer
 
 class AnalysisService : LifecycleService() {
     private val binder = LocalBinder()
@@ -19,7 +18,7 @@ class AnalysisService : LifecycleService() {
 
     private val notification by lazy { createForegroundNotification() }
 
-    private lateinit var analyzerController :AnalyzerController
+    private lateinit var analyzerController: AnalyzerController
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)

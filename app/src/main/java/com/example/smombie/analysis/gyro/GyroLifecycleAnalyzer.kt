@@ -7,7 +7,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.util.Log
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import com.example.smombie.State
@@ -15,7 +14,10 @@ import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.ui.AlertTextView
 import kotlin.math.abs
 
-class GyroLifecycleAnalyzer(private val context: Context, private val state: MutableLiveData<State>) :
+class GyroLifecycleAnalyzer(
+    private val context: Context,
+    private val state: MutableLiveData<State>
+) :
     LifecycleAnalyzer(context as LifecycleOwner), SensorEventListener {
 
     private val alertTextView = AlertTextView(context, this as LifecycleOwner)

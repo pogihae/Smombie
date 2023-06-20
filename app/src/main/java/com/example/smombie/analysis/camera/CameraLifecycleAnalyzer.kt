@@ -12,8 +12,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import com.example.smombie.R
-import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.State
+import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.util.IMAGE_SIZE_X
 import com.example.smombie.util.IMAGE_SIZE_Y
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +63,7 @@ class CameraLifecycleAnalyzer(
         CoroutineScope(Dispatchers.Main).launch {
             imageAnalysis.clearAnalyzer()
             imageAnalysis.setAnalyzer(
-                Executors.newSingleThreadExecutor(), ORTAnalyzer(createOrtSession(), ::updateUI)
+                Executors.newSingleThreadExecutor(), ORTAnalyzer(createOrtSession(), ::updateState)
             )
         }
     }
@@ -86,7 +86,7 @@ class CameraLifecycleAnalyzer(
 
     private val REQUIRED_COUNT = 10
 
-    private fun updateUI(result: AnalysisResult) {
+    private fun updateState(result: AnalysisResult) {
         countMap[result.isSafe] = (countMap[result.isSafe] ?: 0) + 1
         if (countMap[result.isSafe]!! < REQUIRED_COUNT) return
 

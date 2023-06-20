@@ -10,6 +10,7 @@ import com.example.smombie.State
 import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.analysis.camera.CameraLifecycleAnalyzer
 import com.example.smombie.analysis.gyro.GyroLifecycleAnalyzer
+import com.example.smombie.analysis.mic.MicLifecycleAnalyzer
 import com.example.smombie.ui.AlertPreviewView
 import com.example.smombie.ui.AlertTextView
 
@@ -17,9 +18,21 @@ class AnalyzerController(private val context: Context, private val lifecycleOwne
 
     private val state: MutableLiveData<State> = MutableLiveData(State.SAFE)
 
-    private var analyzer: LifecycleAnalyzer? = null
-    private val cameraAnalyzer: CameraLifecycleAnalyzer by lazy { CameraLifecycleAnalyzer(context, state) }
-    private val gyroAnalyzer: GyroLifecycleAnalyzer by lazy { GyroLifecycleAnalyzer(context, state) }
+    private var analyzer: MutableList<LifecycleAnalyzer> =
+        emptyList<LifecycleAnalyzer>().toMutableList()
+    private val cameraAnalyzer: CameraLifecycleAnalyzer by lazy {
+        CameraLifecycleAnalyzer(
+            context,
+            state
+        )
+    }
+    private val gyroAnalyzer: GyroLifecycleAnalyzer by lazy {
+        GyroLifecycleAnalyzer(
+            context,
+            state
+        )
+    }
+    private val micAnalyzer: MicLifecycleAnalyzer by lazy { MicLifecycleAnalyzer(context, state) }
 
     private val alertPreviewView = AlertPreviewView(context, lifecycleOwner)
     private val alertTextView = AlertTextView(context, lifecycleOwner)
@@ -35,24 +48,28 @@ class AnalyzerController(private val context: Context, private val lifecycleOwne
     }
 
     fun start() {
-        if (analyzer == null) analyzer = cameraAnalyzer
-        analyzer!!.start()
+        if (analyzer.isEmpty()) analyzer.add(cameraAnalyzer)
+        analyzer.forEach { _ -> start() }
     }
 
     fun stop() {
-        analyzer?.stop()
+        analyzer.forEach { _ -> stop() }
     }
 
     private fun changeAnalyzer(state: State) {
-        analyzer?.stop()
+        analyzer.forEach { _ -> stop() }
+        analyzer.clear()
 
-        analyzer = when (state) {
-            State.SAFE -> cameraAnalyzer
-            State.WARNING -> gyroAnalyzer
+        when (state) {
+            State.SAFE -> analyzer.add(cameraAnalyzer)
+            State.WARNING -> {
+                analyzer.add(gyroAnalyzer)
+                analyzer.add(micAnalyzer)
+            }
             State.HAZARD -> cameraAnalyzer
         }
 
-        analyzer!!.start()
+        analyzer.forEach { _ -> start() }
     }
 
     private fun updateUI(state: State) {
