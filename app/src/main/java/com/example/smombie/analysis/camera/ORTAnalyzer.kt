@@ -2,6 +2,7 @@ package com.example.smombie.analysis.camera
 
 import ai.onnxruntime.*
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.example.smombie.*
@@ -61,6 +62,7 @@ class ORTAnalyzer(
                         val result = softMax(rawOutput).withIndex().maxBy { it.value }
                         val label = LABELS[result.index]
                         val isSafe = label in SAFE_LABELS && result.value > THRESHOLD
+                        Log.d("RES", "$label ${result.value}")
                         analysisResult = AnalysisResult(label, isSafe)
                     }
                 }
@@ -82,6 +84,6 @@ class ORTAnalyzer(
         val SAFE_LABELS = listOf(
             "SIDEWALK"
         )
-        private const val THRESHOLD = 0.7f
+        private const val THRESHOLD = 0.85f
     }
 }

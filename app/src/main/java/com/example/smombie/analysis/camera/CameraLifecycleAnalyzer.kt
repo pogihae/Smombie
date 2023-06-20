@@ -3,9 +3,6 @@ package com.example.smombie.analysis.camera
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
-import android.graphics.Color
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.util.Size
 import androidx.camera.core.CameraSelector
@@ -13,11 +10,10 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.MutableLiveData
 import com.example.smombie.R
-import com.example.smombie.analysis.Analyzer
-import com.example.smombie.ui.AlertPreviewView
-import com.example.smombie.ui.AlertTextView
-import com.example.smombie.ui.OverlayView
+import com.example.smombie.State
+import com.example.smombie.analysis.LifecycleAnalyzer
 import com.example.smombie.util.IMAGE_SIZE_X
 import com.example.smombie.util.IMAGE_SIZE_Y
 import kotlinx.coroutines.CoroutineScope
@@ -26,34 +22,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-class CameraAnalyzer(
-    private val context: Context
-) : Analyzer(context as LifecycleOwner) {
-
-    private val alertPreviewView = AlertPreviewView(context, this as LifecycleOwner)
-    private val alertTextView = AlertTextView(context, this as LifecycleOwner)
-
-    private var currentView: OverlayView = alertPreviewView
-    private var currentState: Boolean = false
+class CameraLifecycleAnalyzer(
+    private val context: Context, private val state: MutableLiveData<State>
+) : LifecycleAnalyzer(context as LifecycleOwner) {
 
     private val imageAnalysis =
         ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setTargetResolution(Size(IMAGE_SIZE_X, IMAGE_SIZE_Y)).build()
 
-    private val uiHandler = Handler(Looper.getMainLooper())
-
     init {
         startCamera()
     }
 
-    override fun start() {
-        super.start()
-        currentView.show()
+    override fun onStart() {
     }
 
-    override fun stop() {
-        super.stop()
-        currentView.hide()
+    override fun onStop() {
     }
 
     private fun startCamera() {
@@ -63,7 +47,7 @@ class CameraAnalyzer(
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                //cameraProvider.unbindAll()
+                cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     this as LifecycleOwner, cameraSelector, imageAnalysis
                 )
@@ -79,7 +63,7 @@ class CameraAnalyzer(
         CoroutineScope(Dispatchers.Main).launch {
             imageAnalysis.clearAnalyzer()
             imageAnalysis.setAnalyzer(
-                Executors.newSingleThreadExecutor(), ORTAnalyzer(createOrtSession(), ::updateUI)
+                Executors.newSingleThreadExecutor(), ORTAnalyzer(createOrtSession(), ::updateState)
             )
         }
     }
@@ -95,24 +79,20 @@ class CameraAnalyzer(
         }
     }
 
-    private fun updateUI(result: AnalysisResult) {
-        uiHandler.post {
-            Log.d(TAG, result.toString())
-            if (result.isSafe == currentState) return@post
+    // 추론 결과 횟수 저장
+    private val countMap: MutableMap<Boolean, Int> = mutableMapOf(
+        true to 0, false to 0
+    )
 
-            if (result.isSafe) {
-                currentView.hide()
-                alertTextView.setColorAndText(Color.GREEN, result.detectedLabel)
-                currentView = alertTextView
-                currentView.show()
-            } else {
-                currentView.hide()
-                currentView = alertPreviewView
-                currentView.show()
-            }
+    private val REQUIRED_COUNT = 10
 
-            currentState = result.isSafe
-        }
+    private fun updateState(result: AnalysisResult) {
+        countMap[result.isSafe] = (countMap[result.isSafe] ?: 0) + 1
+        if (countMap[result.isSafe]!! < REQUIRED_COUNT) return
+
+        state.value = if (result.isSafe) State.SAFE else State.HAZARD
+
+        countMap[result.isSafe] = 0
     }
 
     companion object {

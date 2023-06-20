@@ -5,7 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 
-abstract class Analyzer(parentLifecycleOwner: LifecycleOwner) : LifecycleOwner,
+abstract class LifecycleAnalyzer(parentLifecycleOwner: LifecycleOwner) : LifecycleOwner,
     DefaultLifecycleObserver {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -15,13 +15,18 @@ abstract class Analyzer(parentLifecycleOwner: LifecycleOwner) : LifecycleOwner,
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
     }
 
-    open fun start() {
+    fun start() {
         lifecycleRegistry.currentState = Lifecycle.State.STARTED
+        onStart()
     }
 
-    open fun stop() {
+    fun stop() {
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        onStop()
     }
+
+    abstract fun onStart()
+    abstract fun onStop()
 
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)

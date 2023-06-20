@@ -1,4 +1,4 @@
-package com.example.smombie.analysis
+package com.example.smombie.controller
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -9,7 +9,6 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.smombie.R
-import com.example.smombie.analysis.camera.CameraAnalyzer
 
 class AnalysisService : LifecycleService() {
     private val binder = LocalBinder()
@@ -19,18 +18,10 @@ class AnalysisService : LifecycleService() {
 
     private val notification by lazy { createForegroundNotification() }
 
-    private lateinit var cameraAnalyzer: CameraAnalyzer
-
-    override fun onCreate() {
-        super.onCreate()
-        cameraAnalyzer = CameraAnalyzer(this)
-    }
+    private lateinit var analyzerController: AnalyzerController
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
-        _isRunning.value = true
-        startForeground(1, notification)
-        cameraAnalyzer.start()
         return binder
     }
 
@@ -39,12 +30,17 @@ class AnalysisService : LifecycleService() {
             stopService()
             return START_NOT_STICKY
         }
+
+        _isRunning.value = true
+        startForeground(1, notification)
+        analyzerController.start()
+
         return super.onStartCommand(intent, flags, startId)
     }
 
-    fun stopService() {
+    private fun stopService() {
         _isRunning.value = false
-        cameraAnalyzer.stop()
+        analyzerController.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -77,8 +73,7 @@ class AnalysisService : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        _isRunning.value = false
-        cameraAnalyzer.stop()
+        stopService()
     }
 
     inner class LocalBinder : Binder() {
@@ -87,6 +82,6 @@ class AnalysisService : LifecycleService() {
 
     companion object {
         private const val TAG = "AnalysisService"
-        private const val ACTION_STOP = "Analyzing.stop"
+        const val ACTION_STOP = "Analyzing.stop"
     }
 }
