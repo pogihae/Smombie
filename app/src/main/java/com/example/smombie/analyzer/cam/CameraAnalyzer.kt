@@ -1,4 +1,4 @@
-package com.example.smombie.analysis.camera
+package com.example.smombie.analyzer.cam
 
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
@@ -9,11 +9,11 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.LifecycleRegistry
 import com.example.smombie.R
-import com.example.smombie.State
-import com.example.smombie.analysis.LifecycleAnalyzer
+import com.example.smombie.analyzer.Analyzer
 import com.example.smombie.util.IMAGE_SIZE_X
 import com.example.smombie.util.IMAGE_SIZE_Y
 import kotlinx.coroutines.CoroutineScope
@@ -22,25 +22,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-class CameraLifecycleAnalyzer(
-    private val context: Context, private val state: MutableLiveData<State>
-) : LifecycleAnalyzer(context as LifecycleOwner) {
+class CameraAnalyzer(
+    private val context: Context,
+    private val onStateChanged: (Analyzer, Analyzer.State) -> Unit
+) : Analyzer, LifecycleOwner {
 
-    private val imageAnalysis =
-        ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setTargetResolution(Size(IMAGE_SIZE_X, IMAGE_SIZE_Y)).build()
+    private val lifecycleRegistry = LifecycleRegistry(this)
+
+    private val imageAnalysis = ImageAnalysis.Builder()
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .setTargetResolution(Size(IMAGE_SIZE_X, IMAGE_SIZE_Y))
+        .build()
 
     init {
-        startCamera()
-    }
-
-    override fun onStart() {
-    }
-
-    override fun onStop() {
-    }
-
-    private fun startCamera() {
+        // Start camera
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
@@ -57,13 +52,25 @@ class CameraLifecycleAnalyzer(
 
             setAnalyzer()
         }, ContextCompat.getMainExecutor(context))
+
+        // Register lifecycle
+        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+    }
+
+    override fun startAnalyze() {
+        lifecycleRegistry.currentState = Lifecycle.State.STARTED
+    }
+
+    override fun stopAnalyze() {
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
     }
 
     private fun setAnalyzer() {
         CoroutineScope(Dispatchers.Main).launch {
             imageAnalysis.clearAnalyzer()
             imageAnalysis.setAnalyzer(
-                Executors.newSingleThreadExecutor(), ORTAnalyzer(createOrtSession(), ::updateState)
+                Executors.newSingleThreadExecutor(),
+                ORTAnalyzer(createOrtSession(), ::onAnalyzeFinish)
             )
         }
     }
@@ -79,23 +86,24 @@ class CameraLifecycleAnalyzer(
         }
     }
 
-    // 추론 결과 횟수 저장
-    private val countMap: MutableMap<Boolean, Int> = mutableMapOf(
-        true to 0, false to 0
-    )
+    private fun onAnalyzeFinish(detected: String, score: Float) {
+        if (score < SCORE_THRESHOLD) return
 
-    private val REQUIRED_COUNT = 10
-
-    private fun updateState(result: AnalysisResult) {
-        countMap[result.isSafe] = (countMap[result.isSafe] ?: 0) + 1
-        if (countMap[result.isSafe]!! < REQUIRED_COUNT) return
-
-        state.value = if (result.isSafe) State.SAFE else State.HAZARD
-
-        countMap[result.isSafe] = 0
+        if (detected != SIDEWALK && detected != SIDEWALK_ENTRY) {
+            onStateChanged(this, Analyzer.State.HAZARD)
+        } else if (detected == SIDEWALK_ENTRY) {
+            onStateChanged(this, Analyzer.State.WARNING)
+        }
     }
+
+    override fun getLifecycle(): Lifecycle = lifecycleRegistry
 
     companion object {
         private const val TAG = "CameraAnalyzer"
+
+        private const val SIDEWALK = "SIDEWALK"
+        private const val SIDEWALK_ENTRY = "ENTRY"
+
+        private const val SCORE_THRESHOLD = 0.95f
     }
 }

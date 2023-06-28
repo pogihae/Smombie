@@ -8,14 +8,9 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
 
 @SuppressLint("ViewConstructor")
-open class OverlayView(
-    val mContext: Context, val mLifecycle: LifecycleOwner
-) : FrameLayout(mContext), DefaultLifecycleObserver {
-
+abstract class OverlayView(mContext: Context) : FrameLayout(mContext) {
     private val mWindowManager: WindowManager
     private val mParams: WindowManager.LayoutParams
 
@@ -43,8 +38,6 @@ open class OverlayView(
         mWindowManager.removeView(this)
     }
 
-    override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
-        mWindowManager.removeView(this)
-    }
+    abstract fun startAlert()
+    abstract fun stopAlert()
 }

@@ -14,8 +14,8 @@ import androidx.lifecycle.LifecycleOwner
 import com.example.smombie.R
 
 @SuppressLint("ViewConstructor")
-class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
-    OverlayView(context, lifecycle) {
+class AlertPreviewView(context: Context) : OverlayView(context) {
+
     private val preview: Preview
 
     private val previewView: PreviewView
@@ -27,6 +27,8 @@ class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
     private var ready = false
 
     init {
+        require(context is LifecycleOwner)
+
         inflate(context, R.layout.alert_preview, this)
 
         previewView = findViewById(R.id.preview)
@@ -69,12 +71,19 @@ class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
         }
 
         preview.setSurfaceProvider(previewView.surfaceProvider)
-        startBlink()
     }
 
     override fun hide() {
         super.hide()
         preview.setSurfaceProvider(null)
+        stopBlink()
+    }
+
+    override fun startAlert() {
+        startBlink()
+    }
+
+    override fun stopAlert() {
         stopBlink()
     }
 
@@ -91,6 +100,6 @@ class AlertPreviewView(context: Context, lifecycle: LifecycleOwner) :
     private fun bindPreview(cameraProvider: ProcessCameraProvider) {
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
         preview.setSurfaceProvider(previewView.surfaceProvider)
-        cameraProvider.bindToLifecycle(mLifecycle, cameraSelector, preview)
+        cameraProvider.bindToLifecycle(context as LifecycleOwner, cameraSelector, preview)
     }
 }

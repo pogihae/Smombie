@@ -1,93 +1,117 @@
 package com.example.smombie.controller
 
 import android.content.Context
-import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.MutableLiveData
-import com.example.smombie.State
-import com.example.smombie.analysis.LifecycleAnalyzer
-import com.example.smombie.analysis.camera.CameraLifecycleAnalyzer
-import com.example.smombie.analysis.gyro.GyroLifecycleAnalyzer
-import com.example.smombie.analysis.mic.MicLifecycleAnalyzer
+import com.example.smombie.analyzer.Analyzer
+import com.example.smombie.analyzer.cam.CameraAnalyzer
+import com.example.smombie.analyzer.gyro.GyroAnalyzer
+import com.example.smombie.analyzer.mic.MicAnalyzer
 import com.example.smombie.ui.AlertPreviewView
 import com.example.smombie.ui.AlertTextView
 
-class AnalyzerController(private val context: Context, private val lifecycleOwner: LifecycleOwner) {
+class AnalyzerController(context: Context, usedAnalyzers: Int) {
 
-    private val state: MutableLiveData<State> = MutableLiveData(State.SAFE)
+    private val analyzers: Map<Int, Analyzer>
+    private val registeredAnalyzers = mutableListOf<Analyzer>()
 
-    private var analyzer: MutableList<LifecycleAnalyzer> =
-        emptyList<LifecycleAnalyzer>().toMutableList()
-    private val cameraAnalyzer: CameraLifecycleAnalyzer by lazy {
-        CameraLifecycleAnalyzer(
-            context,
-            state
-        )
-    }
-    private val gyroAnalyzer: GyroLifecycleAnalyzer by lazy {
-        GyroLifecycleAnalyzer(
-            context,
-            state
-        )
-    }
-    private val micAnalyzer: MicLifecycleAnalyzer by lazy { MicLifecycleAnalyzer(context, state) }
-
-    private val alertPreviewView = AlertPreviewView(context, lifecycleOwner)
-    private val alertTextView = AlertTextView(context, lifecycleOwner)
+    private val alertPreviewView = AlertPreviewView(context)
+    private val alertTextView = AlertTextView(context)
     private val uiHandler = Handler(Looper.getMainLooper())
 
     init {
-        state.observe(lifecycleOwner) {
-            if (it != this.state.value) {
-                updateUI(it)
-                changeAnalyzer(it)
+        val mAnalyzers = mutableMapOf<Int, Analyzer>()
+        val analyzerIds = listOf(ANALYZER_CAMERA, ANALYZER_MIC, ANALYZER_GYRO)
+
+        for (id in analyzerIds) {
+            if ((id or usedAnalyzers) != 0) {
+                mAnalyzers[id] = createAnalyzer(context, id)
+            }
+        }
+
+        analyzers = mAnalyzers
+    }
+
+    fun run() {
+        analyzers.forEach { it.value.stopAnalyze() }
+        registeredAnalyzers.forEach { it.startAnalyze() }
+    }
+
+    fun terminate() {
+        analyzers.forEach { it.value.stopAnalyze() }
+    }
+
+    private fun createAnalyzer(context: Context, id: Int): Analyzer {
+        return when (id) {
+            ANALYZER_CAMERA -> CameraAnalyzer(context) { _, state ->
+                updateUI(state)
+                changeAnalyzer(state)
+            }
+            ANALYZER_MIC -> MicAnalyzer(context) { _, state ->
+                updateUI(state)
+                changeAnalyzer(state)
+            }
+            else -> GyroAnalyzer(context) { _, state ->
+                updateUI(state)
+                changeAnalyzer(state)
             }
         }
     }
 
-    fun start() {
-        if (analyzer.isEmpty()) analyzer.add(cameraAnalyzer)
-        analyzer.forEach { _ -> start() }
-    }
-
-    fun stop() {
-        analyzer.forEach { _ -> stop() }
-    }
-
-    private fun changeAnalyzer(state: State) {
-        analyzer.forEach { _ -> stop() }
-        analyzer.clear()
-
+    private fun changeAnalyzer(state: Analyzer.State) {
         when (state) {
-            State.SAFE -> analyzer.add(cameraAnalyzer)
-            State.WARNING -> {
-                analyzer.add(gyroAnalyzer)
-                analyzer.add(micAnalyzer)
+            Analyzer.State.SAFE -> {
+                analyzers[ANALYZER_CAMERA]?.let {
+                    registeredAnalyzers.clear()
+                    registeredAnalyzers.add(it)
+                }
             }
-            State.HAZARD -> cameraAnalyzer
-        }
 
-        analyzer.forEach { _ -> start() }
+            Analyzer.State.WARNING -> {
+                if (analyzers.size > 1) {
+                    registeredAnalyzers.clear()
+                    analyzers.forEach {
+                        if (it.key != ANALYZER_CAMERA) {
+                            registeredAnalyzers.add(it.value)
+                        }
+                    }
+                }
+            }
+
+            Analyzer.State.HAZARD -> {
+                analyzers[ANALYZER_CAMERA]?.let {
+                    registeredAnalyzers.clear()
+                    registeredAnalyzers.add(it)
+                }
+            }
+        }
     }
 
-    private fun updateUI(state: State) {
+    private fun updateUI(state: Analyzer.State) {
         uiHandler.post {
             when (state) {
-                State.SAFE -> {
+                Analyzer.State.SAFE -> {
                     alertPreviewView.hide()
-                    alertTextView.setColorAndText(Color.GREEN, "SAFE")
+                    alertTextView.startAlert()
                 }
-                State.WARNING -> {
+
+                Analyzer.State.WARNING -> {
                     alertPreviewView.hide()
-                    alertTextView.setColorAndText(Color.CYAN, "WARNING")
+                    alertTextView.startAlert()
                 }
-                State.HAZARD -> {
+
+                Analyzer.State.HAZARD -> {
                     alertTextView.hide()
                     alertPreviewView.show()
+                    alertPreviewView.startAlert()
                 }
             }
         }
+    }
+
+    companion object {
+        const val ANALYZER_CAMERA = 1
+        const val ANALYZER_MIC = 2
+        const val ANALYZER_GYRO = 4
     }
 }
