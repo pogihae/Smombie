@@ -11,9 +11,22 @@ import com.example.smombie.ui.AlertPreviewView
 import com.example.smombie.ui.AlertTextView
 
 
-// 1. 다른 분석 방법이 추가 되어도 코드 변경을 최소화 할 수 있는 구현 - 추상화
-// 2. 경고 단계가 변화하며 필요한 리소스들이 할당 및 해제가 되어 낭비가 없는지 - 카메라 외
 
+// 구현 시 주의
+// 1. 다른 분석 방법이 추가 되어도 코드 변경을 최소화 할 수 있는지 - 추상화
+// 2. 경고 단계가 변화하며 필요한 리소스들이 할당 및 해제가 되는지 - 카메라 외
+
+
+/**
+ *
+ * 각 단계별 사용할 분석 방법을 할당 및 해제해줌,
+ * 단계에 맞는 뷰를 표시 및 숨겨줌
+ *
+ * @param context
+ * @param usedAnalyzers 사용하는 분석 방법, 정수 (or 비트 연산으로 표시)
+ *
+ * @author 박민석 (2022.12)
+ * */
 class AnalyzerController(context: Context, usedAnalyzers: Int) {
 
     private val analyzers: Map<Int, Analyzer>
@@ -36,6 +49,10 @@ class AnalyzerController(context: Context, usedAnalyzers: Int) {
         analyzers = mAnalyzers
     }
 
+    /**
+     * 등록된 분석 방법들로 분석을 시작함.
+     * 사전에 시작 분석 방법 등록해야함
+     * */
     fun run() {
         analyzers.forEach { it.value.stopAnalyze() }
         registeredAnalyzers.forEach { it.startAnalyze() }
@@ -43,6 +60,14 @@ class AnalyzerController(context: Context, usedAnalyzers: Int) {
 
     fun terminate() {
         analyzers.forEach { it.value.stopAnalyze() }
+    }
+
+    /**
+     * 초기 분석 방법 등록을 위한 메소드
+     * */
+    fun registerAnalyzer(id: Int) {
+        val analyzer = analyzers[id] ?: throw IllegalArgumentException()
+        registeredAnalyzers.add(analyzer)
     }
 
     private fun createAnalyzer(context: Context, id: Int): Analyzer {

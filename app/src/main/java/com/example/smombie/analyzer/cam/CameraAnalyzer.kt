@@ -78,7 +78,7 @@ class CameraAnalyzer(
     private suspend fun createOrtSession(): OrtSession? {
         return withContext(Dispatchers.IO) {
             try {
-                val model = context.resources.openRawResource(R.raw.test_door).readBytes()
+                val model = context.resources.openRawResource(R.raw.efficient_net_final).readBytes()
                 OrtEnvironment.getEnvironment().createSession(model)
             } catch (e: Exception) {
                 null
