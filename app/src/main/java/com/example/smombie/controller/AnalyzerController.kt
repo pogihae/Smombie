@@ -10,6 +10,10 @@ import com.example.smombie.analyzer.mic.MicAnalyzer
 import com.example.smombie.ui.AlertPreviewView
 import com.example.smombie.ui.AlertTextView
 
+
+// 1. 다른 분석 방법이 추가 되어도 코드 변경을 최소화 할 수 있는 구현 - 추상화
+// 2. 경고 단계가 변화하며 필요한 리소스들이 할당 및 해제가 되어 낭비가 없는지 - 카메라 외
+
 class AnalyzerController(context: Context, usedAnalyzers: Int) {
 
     private val analyzers: Map<Int, Analyzer>
