@@ -1,8 +1,7 @@
-package com.example.smombie.analysis.camera
+package com.example.smombie.analyzer.cam
 
 import ai.onnxruntime.*
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.example.smombie.*
@@ -10,15 +9,15 @@ import com.example.smombie.util.*
 import java.util.*
 import kotlin.math.exp
 
-data class AnalysisResult(
-    val detectedLabel: String,
-    val isSafe: Boolean
-)
 
 class ORTAnalyzer(
     private val ortSession: OrtSession?,
-    private val updateUICallback: (AnalysisResult) -> Unit
+    private val onAnalyzeFinish: (String, Float) -> Unit
 ) : ImageAnalysis.Analyzer {
+
+    private val allLabels = listOf(
+        "SIDEWALK", "ROAD", "CROSSWALK", "STAIR", "DOOR", "ENTRY"
+    )
 
     private fun softMax(modelResult: FloatArray): FloatArray {
         val values = modelResult.copyOf()
@@ -45,8 +44,6 @@ class ORTAnalyzer(
             imgBitmap.let { Bitmap.createScaledBitmap(it, IMAGE_SIZE_X, IMAGE_SIZE_Y, false) }
         val bitmap = rawBitmap?.rotate(image.imageInfo.rotationDegrees.toFloat())
 
-        var analysisResult: AnalysisResult? = null
-
         if (bitmap != null) {
             val imgData = preProcess(bitmap)
             val inputName = ortSession?.inputNames?.iterator()?.next()
@@ -54,20 +51,21 @@ class ORTAnalyzer(
             val env = OrtEnvironment.getEnvironment()
             env.use {
                 val tensor = OnnxTensor.createTensor(env, imgData, shape)
+
                 tensor.use {
                     val output = ortSession?.run(Collections.singletonMap(inputName, tensor))
+
                     output.use {
-                        @Suppress("UNCHECKED_CAST") val rawOutput =
-                            ((output?.get(0)?.value) as Array<FloatArray>)[0]
+
+                        @Suppress("UNCHECKED_CAST")
+                        val rawOutput = ((output?.get(0)?.value) as Array<FloatArray>)[0]
                         val result = softMax(rawOutput).withIndex().maxBy { it.value }
-                        val label = LABELS[result.index]
-                        val isSafe = label in SAFE_LABELS && result.value > THRESHOLD
-                        Log.d("RES", "$label ${result.value}")
-                        analysisResult = AnalysisResult(label, isSafe)
+                        val label = allLabels[result.index]
+
+                        onAnalyzeFinish(label, result.value)
                     }
                 }
             }
-            analysisResult?.let(updateUICallback)
         }
 
         image.close()
@@ -75,15 +73,5 @@ class ORTAnalyzer(
 
     protected fun finalize() {
         ortSession?.close()
-    }
-
-    companion object {
-        val LABELS = listOf(
-            "SIDEWALK", "ROAD", "CROSSWALK", "STAIR", "DOOR"
-        )
-        val SAFE_LABELS = listOf(
-            "SIDEWALK"
-        )
-        private const val THRESHOLD = 0.85f
     }
 }

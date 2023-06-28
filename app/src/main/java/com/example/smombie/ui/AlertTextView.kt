@@ -8,11 +8,10 @@ import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.drawable.DrawableCompat
-import androidx.lifecycle.LifecycleOwner
 import com.example.smombie.R
 
 @SuppressLint("ViewConstructor")
-class AlertTextView(context: Context, lifecycle: LifecycleOwner) : OverlayView(context, lifecycle) {
+class AlertTextView(context: Context) : OverlayView(context) {
     private val textView: TextView
     private val mBackground: Drawable
 
@@ -20,13 +19,27 @@ class AlertTextView(context: Context, lifecycle: LifecycleOwner) : OverlayView(c
         textView = TextView(context)
         mBackground = AppCompatResources.getDrawable(context, R.drawable.rounded_corner)!!
         addView(textView)
-        setColorAndText(Color.YELLOW, "SAFE")
+        setColor(Color.YELLOW)
     }
 
-    fun setColorAndText(@ColorInt colorInt: Int, newText: String) {
+    fun setColor(@ColorInt colorInt: Int) {
         val wrapped = DrawableCompat.wrap(mBackground)
         DrawableCompat.setTint(wrapped, colorInt)
         background = wrapped
-        textView.text = newText
+
+    }
+
+    fun setText(text: String) {
+        textView.text = text
+    }
+
+    override fun startAlert() {
+        setColor(Color.RED)
+        setText("HAZARD")
+    }
+
+    override fun stopAlert() {
+        setColor(Color.GREEN)
+        setText("SAFE")
     }
 }

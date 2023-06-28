@@ -16,9 +16,14 @@ class AnalysisService : LifecycleService() {
     private var _isRunning: MutableLiveData<Boolean> = MutableLiveData()
     val isRunning: LiveData<Boolean> get() = _isRunning
 
-    private val notification by lazy { createForegroundNotification() }
+    private val notification = createForegroundNotification()
 
-    private lateinit var analyzerController: AnalyzerController
+    private val analyzerController = AnalyzerController(
+        this,
+        AnalyzerController.ANALYZER_CAMERA or
+                AnalyzerController.ANALYZER_MIC or
+                AnalyzerController.ANALYZER_GYRO
+    )
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
@@ -33,14 +38,14 @@ class AnalysisService : LifecycleService() {
 
         _isRunning.value = true
         startForeground(1, notification)
-        analyzerController.start()
+        analyzerController.run()
 
         return super.onStartCommand(intent, flags, startId)
     }
 
     private fun stopService() {
         _isRunning.value = false
-        analyzerController.stop()
+        analyzerController.terminate()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -60,15 +65,13 @@ class AnalysisService : LifecycleService() {
         val stopAction: Notification.Action = Notification.Action
             .Builder(null, "stop", stopPendingIntent).build()
 
-        val notification = Notification.Builder(this, getString(R.string.CHANNEL_ID))
+        return Notification.Builder(this, getString(R.string.CHANNEL_ID))
             .setContentTitle(getString(R.string.app_name))
             .setContentText("${getString(R.string.app_name)} is working")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .addAction(stopAction)
             .setOngoing(false)
             .build()
-
-        return notification
     }
 
     override fun onDestroy() {
